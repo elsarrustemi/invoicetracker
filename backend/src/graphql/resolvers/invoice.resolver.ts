@@ -52,6 +52,7 @@ export class InvoiceResolver {
         contactEmail: invoiceData.contactEmail,
         billingAddress: invoiceData.billingAddress,
         notes: invoiceData.notes,
+        paymentMethod: 'card',
         items: {
           create: items.map((item) => ({
             quantity: item.quantity,
@@ -89,6 +90,10 @@ export class InvoiceResolver {
       billingAddress: invoiceData.billingAddress,
       notes: invoiceData.notes,
     };
+
+    if (invoiceData.paymentMethod) {
+      data.paymentMethod = invoiceData.paymentMethod;
+    }
 
     if (clientId) {
       data.client = { connect: { id: clientId } };

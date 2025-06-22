@@ -44,6 +44,9 @@ export class CreateInvoiceInput {
 
   @Field(() => InvoiceStatus, { nullable: true })
   status?: InvoiceStatus;
+
+  @Field({ nullable: true })
+  paymentMethod?: string;
 }
 
 @InputType()
@@ -71,4 +74,7 @@ export class UpdateInvoiceInput {
 
   @Field({ nullable: true })
   notes?: string;
+
+  @Field({ nullable: true })
+  paymentMethod?: string;
 }
