@@ -28,11 +28,13 @@ import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
+  Payment as PaymentIcon,
 } from "@mui/icons-material";
 import { gql } from "@apollo/client";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import PaymentModal from "../components/PaymentModal";
 
 const GET_INVOICES = gql`
   query GetInvoices {
@@ -181,6 +183,8 @@ interface Service {
 const Invoices: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [formData, setFormData] = useState({
     clientId: "",
     date: new Date(),
@@ -206,6 +210,13 @@ const Invoices: React.FC = () => {
 
   const [createInvoice] = useMutation(CREATE_INVOICE, {
     refetchQueries: [{ query: GET_INVOICES }],
+    onCompleted: (data) => {
+      console.log("Invoice created:", data);
+      handleClose();
+    },
+    onError: (error) => {
+      console.error("Error creating invoice:", error);
+    },
   });
   const [updateInvoice] = useMutation(UPDATE_INVOICE, {
     refetchQueries: [{ query: GET_INVOICES }],
@@ -213,6 +224,8 @@ const Invoices: React.FC = () => {
   const [deleteInvoice] = useMutation(DELETE_INVOICE, {
     refetchQueries: [{ query: GET_INVOICES }],
   });
+
+  console.log("Invoices data:", invoiceData);
 
   const handleOpen = (invoice?: Invoice) => {
     if (invoice) {
@@ -266,41 +279,34 @@ const Invoices: React.FC = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const total = formData.items.reduce(
+      (acc, item) => acc + item.quantity * item.price,
+      0
+    );
+
+    const input = {
+      clientId: formData.clientId,
+      number: `INV-${Date.now()}`,
+      date: formData.date.toISOString(),
+      dueDate: formData.dueDate.toISOString(),
+      items: formData.items.map(({ serviceId, quantity, price }) => ({
+        serviceId,
+        quantity,
+        price,
+      })),
+      total,
+      status: "DRAFT",
+    };
+
     try {
       if (editingInvoice) {
         await updateInvoice({
-          variables: {
-            id: editingInvoice.id,
-            input: {
-              clientId: formData.clientId,
-              date: formData.date,
-              dueDate: formData.dueDate,
-              items: formData.items.map((item) => ({
-                serviceId: item.serviceId,
-                quantity: item.quantity,
-                price: item.price,
-              })),
-            },
-          },
+          variables: { id: editingInvoice.id, input },
         });
       } else {
-        await createInvoice({
-          variables: {
-            input: {
-              clientId: formData.clientId,
-              number: `INV-${Date.now()}`,
-              date: formData.date,
-              dueDate: formData.dueDate,
-              items: formData.items.map((item) => ({
-                serviceId: item.serviceId,
-                quantity: item.quantity,
-                price: item.price,
-              })),
-            },
-          },
-        });
+        await createInvoice({ variables: { input } });
       }
-      setOpen(false);
     } catch (error) {
       console.error("Error saving invoice:", error);
     }
@@ -316,6 +322,20 @@ const Invoices: React.FC = () => {
         console.error("Error deleting invoice:", error);
       }
     }
+  };
+
+  const handlePaymentSuccess = () => {
+    window.location.reload();
+  };
+
+  const handlePayInvoice = (invoice: Invoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentModalOpen(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setPaymentModalOpen(false);
+    setSelectedInvoice(null);
   };
 
   if (loadingInvoices || loadingClients || loadingServices) {
@@ -382,6 +402,12 @@ const Invoices: React.FC = () => {
                     color="error"
                   >
                     <DeleteIcon />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => handlePayInvoice(invoice)}
+                    color="primary"
+                  >
+                    <PaymentIcon />
                   </IconButton>
                 </TableCell>
               </TableRow>
@@ -535,6 +561,15 @@ const Invoices: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
+
+      <PaymentModal
+        open={paymentModalOpen}
+        onClose={handleClosePaymentModal}
+        onSuccess={handlePaymentSuccess}
+        invoiceId={selectedInvoice?.id || ''}
+        amount={selectedInvoice?.total || 0}
+        currency="usd"
+      />
     </Box>
   );
 };

@@ -13,6 +13,8 @@ import {
   Toolbar,
   Typography,
   ButtonBase,
+  Menu,
+  MenuItem,
 } from "@mui/material";
 import {
   Menu as MenuIcon,
@@ -24,10 +26,13 @@ import {
   BarChart as BarChartIcon,
   Notifications as NotificationsIcon,
   Settings as SettingsIcon,
+  AccountCircle as AccountCircleIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
 import Badge from '@mui/material/Badge';
 import Avatar from '@mui/material/Avatar';
 import Stack from '@mui/material/Stack';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
@@ -39,9 +44,25 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const { user, logout } = useAuth();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
+  };
+
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+    handleMenuClose();
   };
 
   const menuItems = [
@@ -125,18 +146,48 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NotificationsIcon sx={{ fontSize: 28, cursor: 'pointer' }} />
             </Badge>
             <Stack direction="row" alignItems="center" spacing={1}>
-              <Avatar
-                alt="Sarah Johnson"
-                src="https://randomuser.me/api/portraits/women/44.jpg"
-                sx={{ width: 36, height: 36 }}
-              />
+              <IconButton
+                onClick={handleMenuOpen}
+                sx={{ p: 0 }}
+              >
+                <Avatar
+                  alt={`${user?.firstName} ${user?.lastName}`}
+                  sx={{ width: 36, height: 36 }}
+                >
+                  {user?.firstName?.charAt(0)}{user?.lastName?.charAt(0)}
+                </Avatar>
+              </IconButton>
               <Typography fontWeight={600} sx={{ display: { xs: 'none', md: 'block' } }}>
-                Sarah Johnson
+                {user?.firstName} {user?.lastName}
               </Typography>
             </Stack>
           </Stack>
         </Toolbar>
       </AppBar>
+
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+      >
+        <MenuItem onClick={handleMenuClose}>
+          <AccountCircleIcon sx={{ mr: 1 }} />
+          Profile
+        </MenuItem>
+        <MenuItem onClick={handleLogout}>
+          <LogoutIcon sx={{ mr: 1 }} />
+          Logout
+        </MenuItem>
+      </Menu>
+
       <Box
         component="nav"
         sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
